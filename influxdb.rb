@@ -19,13 +19,13 @@ module Sensu::Extension
       'Outputs metrics to InfluxDB'
     end
 
-    def post_init()
+    def post_init
       # NOTE: Making sure we do not get any data from the Main
     end
 
     def run(event_data)
       event = parse_event(event_data)
-      conf = parse_settings()
+      conf = parse_settings
 
       # init data and check settings
       data = []
@@ -44,17 +44,17 @@ module Sensu::Extension
       }
 
       if conf['hosts']
-        influx_conf.merge!({:hosts => conf['hosts']})
+        influx_conf.merge!(:hosts => conf['hosts'])
       else
-        influx_conf.merge!({:host => conf['host']})
+        influx_conf.merge!(:host => conf['host'])
       end
 
       event['check']['output'].split(/\n/).each do |line|
         key, value, time = line.split(/\s+/)
-        values = {:value => value.to_f}
+        values = { :value => value.to_f }
 
         if event['check']['duration']
-          values.merge!({:duration => event['check']['duration'].to_f})
+          values.merge!(:duration => event['check']['duration'].to_f)
         end
 
         if conf['strip_metric'] == 'host'
@@ -68,9 +68,9 @@ module Sensu::Extension
         key.gsub!(',', '\,')
 
         # Merging : default conf tags < check embedded tags < sensu client/host tag
-        tags = conf.fetch('tags', {}).merge(event['check']['influxdb']['tags']).merge({:host => client})
+        tags = conf.fetch('tags', {}).merge(event['check']['influxdb']['tags']).merge(:host => client)
 
-        data += [{:series => key, :tags => tags, :values => values, :timestamp => time.to_i}]
+        data += [{ :series => key, :tags => tags, :values => values, :timestamp => time.to_i }]
       end
 
       begin
@@ -88,12 +88,14 @@ module Sensu::Extension
     end
 
     private
+
     def parse_event(event_data)
       begin
         event = JSON.parse(event_data)
 
         # default values
-        event['check']['time_precision'] ||= 's' # n, u, ms, s, m, and h (default community plugins use standard epoch date)
+        # n, u, ms, s, m, and h (default community plugins use epoch in sec)
+        event['check']['time_precision'] ||= 's'
         event['check']['influxdb'] ||= {}
         event['check']['influxdb']['tags'] ||= {}
         event['check']['influxdb']['database'] ||= nil
@@ -104,10 +106,10 @@ module Sensu::Extension
       return event
     end
 
-    def parse_settings()
+    def parse_settings
       begin
         settings = @settings['influxdb']
-        
+
         # default values
         settings['tags'] ||= {}
         settings['use_ssl'] ||= false
@@ -122,14 +124,10 @@ module Sensu::Extension
 
     def slice_host(slice, prefix)
       prefix.chars.zip(slice.chars).each do |char1, char2|
-        if char1 != char2
-          break
-        end
+        break if char1 != char2
         slice.slice!(char1)
       end
-      if slice.chars.first == '.'
-        slice.slice!('.')
-      end
+      slice.slice!('.') if slice.chars.first == '.'
       return slice
     end
   end
