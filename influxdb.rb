@@ -33,28 +33,28 @@ module Sensu::Extension
       event['check']['influxdb']['database'] ||= conf['database']
 
       influx_conf = {
-        :database => event['check']['influxdb']['database'],
-        :username => conf['username'],
-        :password => conf['password'],
-        :time_precision => event['check']['time_precision'],
-        :use_ssl => conf['use_ssl'],
-        :verify_ssl => conf['verify_ssl'],
-        :async => true,
-        :retry => conf['retry']
+        database: event['check']['influxdb']['database'],
+        username: conf['username'],
+        password: conf['password'],
+        time_precision: event['check']['time_precision'],
+        use_ssl: conf['use_ssl'],
+        verify_ssl: conf['verify_ssl'],
+        async: true,
+        retry: conf['retry']
       }
 
       if conf['hosts']
-        influx_conf.merge!(:hosts => conf['hosts'])
+        influx_conf.merge!(hosts: conf['hosts'])
       else
-        influx_conf.merge!(:host => conf['host'])
+        influx_conf.merge!(host: conf['host'])
       end
 
       event['check']['output'].split(/\n/).each do |line|
         key, value, time = line.split(/\s+/)
-        values = { :value => value.to_f }
+        values = { value: value.to_f }
 
         if event['check']['duration']
-          values.merge!(:duration => event['check']['duration'].to_f)
+          values.merge!(duration: event['check']['duration'].to_f)
         end
 
         if conf['strip_metric'] == 'host'
@@ -67,10 +67,12 @@ module Sensu::Extension
         # TODO : create a key_clean def to refactor this
         key.gsub!(',', '\,')
 
-        # Merging : default conf tags < check embedded tags < sensu client/host tag
-        tags = conf.fetch('tags', {}).merge(event['check']['influxdb']['tags']).merge(:host => client)
+        # Merging : default conf tags < check tags < sensu client/host tag
+        tags = conf.fetch('tags', {})
+        tags.merge!(event['check']['influxdb']['tags'])
+        tags.merge!(host: client)
 
-        data += [{ :series => key, :tags => tags, :values => values, :timestamp => time.to_i }]
+        data += [{ series: key, tags: tags, values: values, timestamp: time.to_i }]
       end
 
       begin
