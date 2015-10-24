@@ -75,7 +75,7 @@ module Sensu::Extension
 
       begin
         influxdb = ::InfluxDB::Client.new influx_conf
-        influxdb.write_points(data);0
+        influxdb.write_points(data)
       rescue
         puts 'Failed to send data to InfluxDB'
       end
