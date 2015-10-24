@@ -1,7 +1,6 @@
-require "rubygems" if RUBY_VERSION < '1.9.0'
-require "em-http-request"
-require "eventmachine"
-require "json"
+require 'rubygems' if RUBY_VERSION < '1.9.0'
+require 'influxdb'
+require 'json'
 
 module Sensu::Extension
   class InfluxDB < Handler
@@ -11,13 +10,13 @@ module Sensu::Extension
 
     def definition
       {
-        type: "extension",
-        name: "influxdb"
+        type: 'extension',
+        name: 'influxdb'
       }
     end
 
     def description
-      "Outputs metrics to InfluxDB"
+      'Outputs metrics to InfluxDB'
     end
 
     def post_init()
@@ -25,35 +24,63 @@ module Sensu::Extension
     end
 
     def run(event_data)
-      data = parse_event(event_data)
+      event = parse_event(event_data)
       conf = parse_settings()
 
-      data["output"].split(/\n/).each do |line|
-        key, value, time = line.split(/\s+/)
+      # init data and check settings
+      data = []
+      client = event['client']['name']
+      event['check']['influxdb']['database'] ||= conf['database']
 
-        if conf["strip_metric"] == "host"
-          key = slice_host(key, data["host"])
-        elsif conf["strip_metric"]
+      influx_conf = {
+        :database => event['check']['influxdb']['database'],
+        :username => conf['username'],
+        :password => conf['password'],
+        :time_precision => event['check']['time_precision'],
+        :use_ssl => conf['use_ssl'],
+        :verify_ssl => conf['verify_ssl'],
+        :async => true,
+        :retry => conf['retry']
+      }
+
+      if conf['hosts']
+        influx_conf.merge!({:hosts => conf['hosts']})
+      else
+        influx_conf.merge!({:host => conf['host']})
+      end
+
+      event['check']['output'].split(/\n/).each do |line|
+        key, value, time = line.split(/\s+/)
+        values = {:value => value.to_f}
+
+        if event['check']['duration']
+          values.merge!({:duration => event['check']['duration'].to_f})
+        end
+
+        if conf['strip_metric'] == 'host'
+          key = slice_host(key, client)
+        elsif conf['strip_metric']
           key.gsub!(/^.*#{conf['strip_metric']}\.(.*$)/, '\1')
         end
 
-        body = [{
-          "name" => key,
-          "columns" => ["time", "value"],
-          "points" => [[time.to_f, value.to_f]]
-        }]
+        # Avoid things break down due to comma in key name
+        # TODO : create a key_clean def to refactor this
+        key.gsub!(',', '\,')
 
-        database = data["database"]
-  
-        protocol = "http"
-        if settings["ssl_enable"]
-          protocol = "https"
-        end
-        
-        EventMachine::HttpRequest.new("#{ protocol }://#{ conf["host"] }:#{ conf["port"] }/db/#{ database }/series?time_precision=#{ data["time_precision"] }&u=#{ conf["user"] }&p=#{ conf["password"] }").post :head => { "content-type" => "application/x-www-form-urlencoded" }, :body => body.to_json
+        # Merging : default conf tags < check embedded tags < sensu client/host tag
+        tags = conf.fetch('tags', {}).merge(event['check']['influxdb']['tags']).merge({:host => client})
 
+        data += [{:series => key, :tags => tags, :values => values, :timestamp => time.to_i}]
       end
-      yield("", 0)
+
+      begin
+        influxdb = ::InfluxDB::Client.new influx_conf
+        influxdb.write_points(data);0
+      rescue
+        puts 'Failed to send data to InfluxDB'
+      end
+
+      yield('', 0)
     end
 
     def stop
@@ -61,53 +88,49 @@ module Sensu::Extension
     end
 
     private
-      def parse_event(event_data)
-        begin
-          event = JSON.parse(event_data)
-          data = {
-            "database" => (event["database"].nil? ? @settings['influxdb']['database'] : event["database"]),
-            "duration" => event["check"]["duration"],
-            "host" => event["client"]["name"],
-            "output" => event["check"]["output"],
-            "series" => event["check"]["name"],
-            "timestamp" => event["check"]["issued"],
-            "time_precision" => event["check"].fetch("time_precision", "s") # n, u, ms, s, m, and h (default community plugins use standard epoch date)
-          }
-        rescue => e
-          puts " Failed to parse event data: #{e} "
-        end
-        return data
-      end
+    def parse_event(event_data)
+      begin
+        event = JSON.parse(event_data)
 
-      def parse_settings()
-        begin
-          settings = {
-            "database" => @settings["influxdb"]["database"],
-            "host" => @settings["influxdb"]["host"],
-            "password" => @settings["influxdb"]["password"],
-            "port" => @settings["influxdb"]["port"],
-            "ssl_enable" => @settings["influxdb"]["ssl_enable"],
-            "strip_metric" => @settings["influxdb"]["strip_metric"],
-            "timeout" => @settings["influxdb"]["timeout"],
-            "user" => @settings["influxdb"]["user"]
-          }
-        rescue => e
-          puts "Failed to parse InfluxDB settings #{e} "
-        end
-        return settings
-      end
+        # default values
+        event['check']['time_precision'] ||= 's' # n, u, ms, s, m, and h (default community plugins use standard epoch date)
+        event['check']['influxdb'] ||= {}
+        event['check']['influxdb']['tags'] ||= {}
+        event['check']['influxdb']['database'] ||= nil
 
-      def slice_host(slice, prefix)
-        prefix.chars().zip(slice.chars()).each do | char1, char2 |
-          if char1 != char2
-            break
-          end
-          slice.slice!(char1)
-        end
-        if slice.chars.first == "."
-          slice.slice!(".")
-        end
-        return slice
+      rescue => e
+        puts "Failed to parse event data: #{e}"
       end
+      return event
+    end
+
+    def parse_settings()
+      begin
+        settings = @settings['influxdb']
+        
+        # default values
+        settings['tags'] ||= {}
+        settings['use_ssl'] ||= false
+        settings['verify_ssl'] ||= false
+        settings['retry'] ||= 10
+
+      rescue => e
+        puts "Failed to parse InfluxDB settings #{e}"
+      end
+      return settings
+    end
+
+    def slice_host(slice, prefix)
+      prefix.chars.zip(slice.chars).each do |char1, char2|
+        if char1 != char2
+          break
+        end
+        slice.slice!(char1)
+      end
+      if slice.chars.first == '.'
+        slice.slice!('.')
+      end
+      return slice
+    end
   end
 end
