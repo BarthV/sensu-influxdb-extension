@@ -68,7 +68,7 @@ Check definitions can now specify a Sensu check extension to run,
 
 ## Handler config
 
-`/etc/sensu/conf.d/influxdb.json`
+_/etc/sensu/conf.d/influxdb.json_ :
 ```json
 {
   "influxdb": {
