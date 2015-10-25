@@ -8,7 +8,7 @@ You'll have to ensure that the following gem is present inside Sensu's embedded 
 # Usage
 The configuration options are pretty straight forward.
 
-Metrics are inserted into the database using the check's key name as _measurement_ name. So if you're using the `sensu-plugins-load-checks` community plugin, the outpout will be :
+Metrics are inserted into the database using the check's key name as _measurement_ name. So if you're using the `sensu-plugins-load-checks` community plugin, the output will be :
 ```
 my-host-01.load_avg.one 0.02 1444824197
 my-host-01.load_avg.five 0.04 1444824197
