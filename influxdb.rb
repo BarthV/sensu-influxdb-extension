@@ -72,8 +72,9 @@ module Sensu::Extension
         key.gsub!("\\"){ "\\\\" }
 
         # Merging : default conf tags < check tags < sensu client/host tag
-        tags = conf.fetch('tags', {})
-        tags.merge!(event['check']['influxdb']['tags'])
+        # We're doing weird things to ensure that we're using only symbols as hashkey
+        tags = conf['tags'].inject({}){|memo,(k,v)| memo[k.to_sym] = v; memo}
+        tags.merge!(event['check']['influxdb']['tags'].inject({}){|memo,(k,v)| memo[k.to_sym] = v; memo})
         tags.merge!(host: client)
 
         data += [{ series: key, tags: tags, values: values, timestamp: time.to_i }]
