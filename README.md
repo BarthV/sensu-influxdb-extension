@@ -60,7 +60,7 @@ _/etc/sensu/conf.d/handlers/metrics.json_ :
 }
 ```
 
-_Note :_ Since Sensu 0.17.1 you can also run extension directly without creating any wrapper handler :
+Since Sensu 0.17.1 you can also run extensions directly without creating any wrapper handler :
 ```
 Check definitions can now specify a Sensu check extension to run,
 "extension", instead of a command.
