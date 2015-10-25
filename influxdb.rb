@@ -120,7 +120,7 @@ module Sensu::Extension
         # default values
         settings['tags'] ||= {}
         settings['use_ssl'] ||= false
-        settings['verify_ssl'] ||= false
+        settings['verify_ssl'] ||= true
         settings['retry'] ||= 8
         settings['prefix'] ||= ''
 
