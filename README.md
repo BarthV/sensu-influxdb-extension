@@ -40,12 +40,12 @@ time                  host        value  duration
 Additionally a `duration` value can be present based on the time it took the check to run (this is fetched from the sensu event data).
 
 The name of the _measurement_ is based on the value of `strip_metric` described below.
-The name of the key ```host``` is grabbed from sensu event client name.
+The name of the _key_ `host` is grabbed from sensu event client name.
 
 ## Extension not a handler
 Note that the first push of this was a handler that could be called via `pipe`. This is now an actual extension that's more performant since it's actually in the sensu-server runtime. Additionally it's now using batch submission to InfluxDB by writing all the points for a given series at once.
 
-Just drop the ruby file in `/etc/sensu/extensions` and create a set to wrap this extension into a callable handler. In this example, we created a ```metrics``` handler wrapping a debug output and this Influx extension :
+Just drop the ruby file in `/etc/sensu/extensions` and create a set to wrap this extension into a callable handler. In this example, we created a `metrics` handler wrapping a debug output and this Influx extension :
 
 _/etc/sensu/conf.d/handlers/metrics.json_ :
 ```json
@@ -92,7 +92,7 @@ Check definitions can now specify a Sensu check extension to run,
 
 * `host`, `port`, `username`, `password` and `database` are pretty straight forward. If `use_ssl` is set to true, the connection to the influxdb server will be made using https instead of http.
 
-* `tags` hash is also pretty straight forward. Just list here in a flat-hash design as many influxdb tags you wish to be added in your measures.
+* `tags` hash is also pretty straight forward. Just list here in a flat-hash design as many influxdb tags you wish to be added in your _measurements_.
 
 * `strip_metric` however might not be. This is used to "cleanup" the data sent to influxdb. Normally everything sent to handlers is akin to the `graphite`/`stats` style:
 ```
@@ -107,7 +107,7 @@ Using the examples above, if you set the `strip_metric` to `host`, then the colu
 
 Note that :
 * `strip_metric` isn't required.
-* you can cleanup an arbitrary string from your keyname or use `host` as special value to cleanup the sensu event client name from your key.
+* you can cleanup an arbitrary string from your keyname or use `host` as special value to cleanup the sensu event client name from your key
 
 ## Check options
 
@@ -151,5 +151,5 @@ load_avg.one,stage:prod,region:eu-west-1,host:iprint-test-sa-01.photobox.com val
 load_avg.five,stage:prod,region:eu-west-1,host:iprint-test-sa-01.photobox.com value=0.86,duration=0.398 1444816792147
 load_avg.fifteen,stage:prod,region:eu-west-1,host:iprint-test-sa-01.photobox.com value=0.84,duration=0.375 1444816792147
 
- * will be sent to : http://my-influx09.company.com:8086/db/custom-db/series?time_precision=s&u=sensu&p=sensu
+ * Will be sent to : http://my-influx09.company.com:8086/db/custom-db/series?time_precision=s&u=sensu&p=sensu
 ```
