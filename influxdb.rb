@@ -79,7 +79,7 @@ module Sensu::Extension
         influxdb = ::InfluxDB::Client.new influx_conf
         influxdb.write_points(data)
       rescue
-        puts 'Failed to send data to InfluxDB'
+        @logger.warn("Failed to write points to InfluxDB: #{data.to_json}")
       end
 
       yield('', 0)
@@ -103,7 +103,7 @@ module Sensu::Extension
         event['check']['influxdb']['database'] ||= nil
 
       rescue => e
-        puts "Failed to parse event data: #{e}"
+        @logger.warn("Failed to parse event data: #{e}")
       end
       return event
     end
@@ -119,7 +119,7 @@ module Sensu::Extension
         settings['retry'] ||= 10
 
       rescue => e
-        puts "Failed to parse InfluxDB settings #{e}"
+        @logger.warn("Failed to parse InfluxDB settings #{e}")
       end
       return settings
     end
