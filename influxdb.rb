@@ -121,7 +121,7 @@ module Sensu::Extension
         settings['use_ssl'] ||= false
         settings['verify_ssl'] ||= false
         settings['retry'] ||= 8
-        settings['prefix'] ||= nil
+        settings['prefix'] ||= ''
 
       rescue => e
         @logger.warn("Failed to parse InfluxDB settings #{e}")

@@ -109,6 +109,11 @@ Note that :
 * `strip_metric` isn't required.
 * you can cleanup an arbitrary string from your keyname or use `host` as special value to cleanup the sensu event client name from your key
 
+#### More attributes
+
+* `retry` : specify the retry number for the write operation (`false` for disable, `0` or true for infinite, any `integer` for a finite retry times. Default is `8`
+* `prefix` : the specified path prefix when building the url (e.g.: /prefix/db/dbname...)
+
 ## Check options
 
 In the check config, an optional `influxdb` section can be added, containing a `database` option and `tags`.
@@ -116,7 +121,9 @@ If specified, this values will overrides the default `database` option in the ha
 
 This allows events to be written to different influxdb databases and modify key indexes on a check-by-check basis.
 
-You can also adjust the timestamp time precision of your checks in the check config with the `time_precision` attribute.
+You can also adjust the timestamp time precision of your checks in the check config with the `time_precision` attribute :
+* default is `'s'`
+* accepted values are `'n'`, `'u'`, `'ms'`, `'s'`, `'m'` and `'h'`
 
 ### Example check config
 
