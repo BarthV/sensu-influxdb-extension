@@ -160,3 +160,9 @@ load_avg.fifteen,stage:prod,region:eu-west-1,host:iprint-test-sa-01.photobox.com
 
  * Will be sent to : http://my-influx09.company.com:8086/db/custom-db/series?time_precision=s&u=sensu&p=sensu
 ```
+
+## Caveat
+Currently we're calling `influxdb.write_points(data)` to write data to Influx. It seems that `write_points` function is writing some of its warning (retries, connection issues, etc.) on stdout.
+
+This behaviour cannot be disabled or mutated yet. So it __will__ wreck your nice Sensu json logs.
+But We're working on that :-)
