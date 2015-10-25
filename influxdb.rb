@@ -63,9 +63,12 @@ module Sensu::Extension
           key.gsub!(/^.*#{conf['strip_metric']}\.(.*$)/, '\1')
         end
 
-        # Avoid things break down due to comma in key name
+        # Avoid things break down due to special chars in key name
         # TODO : create a key_clean def to refactor this
         key.gsub!(',', '\,')
+        key.gsub!(/\s/, '\ ')
+        key.gsub!('"', '\"')
+        key.gsub!("\\"){ "\\\\" }
 
         # Merging : default conf tags < check tags < sensu client/host tag
         tags = conf.fetch('tags', {})
@@ -116,7 +119,7 @@ module Sensu::Extension
         settings['tags'] ||= {}
         settings['use_ssl'] ||= false
         settings['verify_ssl'] ||= false
-        settings['retry'] ||= 10
+        settings['retry'] ||= 8
 
       rescue => e
         @logger.warn("Failed to parse InfluxDB settings #{e}")
