@@ -1,6 +1,6 @@
 # Requirements
 
-This extension uses [InfluxDB official gem](https://github.com/influxdb/influxdb-ruby) to send metrics.
+This extension uses [InfluxDB official gem](https://github.com/influxdb/influxdb-ruby) to send metrics in a asynchronous way.
 
 You'll have to ensure that the following gem is present inside Sensu's embedded Ruby :
 * `influxdb >= 0.2.0` ruby gem

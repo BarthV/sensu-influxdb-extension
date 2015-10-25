@@ -33,6 +33,7 @@ module Sensu::Extension
       event['check']['influxdb']['database'] ||= conf['database']
 
       influx_conf = {
+        prefix: conf['prefix'],
         database: event['check']['influxdb']['database'],
         username: conf['username'],
         password: conf['password'],
@@ -120,6 +121,7 @@ module Sensu::Extension
         settings['use_ssl'] ||= false
         settings['verify_ssl'] ||= false
         settings['retry'] ||= 8
+        settings['prefix'] ||= nil
 
       rescue => e
         @logger.warn("Failed to parse InfluxDB settings #{e}")
