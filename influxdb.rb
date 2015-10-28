@@ -40,7 +40,7 @@ module Sensu::Extension
         time_precision: event['check']['time_precision'],
         use_ssl: conf['use_ssl'],
         verify_ssl: conf['verify_ssl'],
-        async: true,
+        # async: true, DISABLED : BIG PERFORMANCE ISSUE !
         retry: conf['retry']
       }
 
@@ -121,7 +121,7 @@ module Sensu::Extension
         settings['tags'] ||= {}
         settings['use_ssl'] ||= false
         settings['verify_ssl'] ||= true
-        settings['retry'] ||= 8
+        settings['retry'] ||= 5
         settings['prefix'] ||= ''
 
       rescue => e
