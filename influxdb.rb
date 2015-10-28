@@ -20,7 +20,27 @@ module Sensu::Extension
     end
 
     def post_init
-      # NOTE: Making sure we do not get any data from the Main
+      # init InfluxDB connexion with global args
+      conf = parse_settings
+      influx_conf = {
+        prefix: conf['prefix'],
+        database: conf['database'],
+        username: conf['username'],
+        password: conf['password'],
+        time_precision: conf['time_precision'],
+        use_ssl: conf['use_ssl'],
+        verify_ssl: conf['verify_ssl'],
+        # async: true, DISABLED : BIG PERFORMANCE ISSUE ! queue size & workers hardcoded !
+        retry: conf['retry']
+      }
+
+      if conf['hosts']
+        influx_conf.merge!(hosts: conf['hosts'])
+      else
+        influx_conf.merge!(host: conf['host'])
+      end
+
+      @ixdb = ::InfluxDB::Client.new influx_conf
     end
 
     def run(event_data)
@@ -30,25 +50,9 @@ module Sensu::Extension
       # init data and check settings
       data = []
       client = event['client']['name']
-      event['check']['influxdb']['database'] ||= conf['database']
 
-      influx_conf = {
-        prefix: conf['prefix'],
-        database: event['check']['influxdb']['database'],
-        username: conf['username'],
-        password: conf['password'],
-        time_precision: event['check']['time_precision'],
-        use_ssl: conf['use_ssl'],
-        verify_ssl: conf['verify_ssl'],
-        # async: true, DISABLED : BIG PERFORMANCE ISSUE !
-        retry: conf['retry']
-      }
-
-      if conf['hosts']
-        influx_conf.merge!(hosts: conf['hosts'])
-      else
-        influx_conf.merge!(host: conf['host'])
-      end
+      # override database global attr with check attribute
+      @ixdb.config.database = event['check']['influxdb']['database'] ||= conf['database']
 
       event['check']['output'].split(/\n/).each do |line|
         key, value, time = line.split(/\s+/)
@@ -81,8 +85,7 @@ module Sensu::Extension
       end
 
       begin
-        influxdb = ::InfluxDB::Client.new influx_conf
-        influxdb.write_points(data)
+        @ixdb.write_points(data, event['check']['time_precision'])
       rescue
         @logger.warn("Failed to write points to InfluxDB: #{data.to_json}")
       end
@@ -102,10 +105,8 @@ module Sensu::Extension
 
         # default values
         # n, u, ms, s, m, and h (default community plugins use epoch in sec)
-        event['check']['time_precision'] ||= 's'
         event['check']['influxdb'] ||= {}
         event['check']['influxdb']['tags'] ||= {}
-        event['check']['influxdb']['database'] ||= nil
 
       rescue => e
         @logger.warn("Failed to parse event data: #{e}")
@@ -123,6 +124,7 @@ module Sensu::Extension
         settings['verify_ssl'] ||= true
         settings['retry'] ||= 5
         settings['prefix'] ||= ''
+        settings['time_precision'] ||= 's'
 
       rescue => e
         @logger.warn("Failed to parse InfluxDB settings #{e}")
